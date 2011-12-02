@@ -2,7 +2,7 @@ package yed
 
 import (
   "fmt"
-  "xml"
+  "encoding/xml"
   "os"
   "strconv"
   "io"
