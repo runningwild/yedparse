@@ -27,7 +27,7 @@ func (a *Attribute) Float64() float64 {
   if a.Type != "double" {
     panic(fmt.Sprintf("Tried to get an Attribute of type %s as a double.", a.Type))
   }
-  v,err := strconv.Atof64(a.Data)
+  v,err := strconv.ParseFloat(a.Data, 64)
   if err != nil {
     panic(err.Error())
   }
