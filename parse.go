@@ -9,9 +9,9 @@ import (
 )
 
 type Attribute struct {
-  Key  string `xml:"attr"`
-  Type string `xml:"attr"`
-  Data string `xml:"chardata"`
+  Key  string `xml:"key,attr"`
+  Type string `xml:"type,attr"`
+  Data string `xml:",chardata"`
 }
 func (a *Attribute) Int() int {
   if a.Type != "int" {
@@ -41,9 +41,9 @@ func (a *Attribute) Str() string {
 }
 
 type Section struct {
-  Name       string      `xml:"attr"`
-  Attributes []Attribute `xml:"attribute>"`
-  Sections   []Section   `xml:"section>"`
+  Name       string      `xml:"name,attr"`
+  Attributes []Attribute `xml:"attribute"`
+  Sections   []Section   `xml:"section"`
 
   atts map[string]*Attribute
 }
