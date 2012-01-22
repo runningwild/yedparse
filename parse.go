@@ -6,6 +6,8 @@ import (
   "os"
   "strconv"
   "io"
+  "io/ioutil"
+  "bytes"
 )
 
 type Attribute struct {
@@ -206,7 +208,19 @@ type Edge struct {
 
 func Parse(r io.Reader) (*Document, error) {
   var s Section
-  err := xml.Unmarshal(r, &s)
+  data,err := ioutil.ReadAll(r)
+  if err != nil {
+    return nil, err
+  }
+  for i := 0; i < len(data) - 1; i++ {
+    if data[i] == '?' && data[i+1] == '>' {
+      data = data[i+2:]
+      break
+    }
+  }
+  r = bytes.NewBuffer(data)
+
+  err = xml.Unmarshal(r, &s)
   if err != nil {
     return nil, err
   }
