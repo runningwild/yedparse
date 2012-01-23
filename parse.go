@@ -319,7 +319,7 @@ func (n *Node) NumGroupOutputs() int {
   return len(n.outputs) + n.Group().NumGroupOutputs()
 }
 func (n *Node) GroupOutput(id int) *Edge {
-  if id < len(n.inputs) {
+  if id < len(n.outputs) {
     return n.outputs[id]
   }
   return n.Group().GroupOutput(id - len(n.outputs))
