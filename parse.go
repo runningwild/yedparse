@@ -60,16 +60,16 @@ func (s *Section) GetAttribute(name string) *attribute {
   return s.atts[name]
 }
 
-type Error struct {
-  ErrorString string
+type yedError struct {
+  errorString string
 }
-func (e *Error) Error() string {
-  return e.ErrorString
+func (e *yedError) Error() string {
+  return e.errorString
 }
 
 func (s *Section) MakeDocument() (*Document, error) {
   if s.Name != "xgml" {
-    return nil, &Error{ "Documents can only be made out of 'xgml' sections." }
+    return nil, &yedError{ "Documents can only be made out of 'xgml' sections." }
   }
   var doc Document
   doc.Creator = s.GetAttribute("Creator").Str()
@@ -89,7 +89,7 @@ func (s *Section) MakeDocument() (*Document, error) {
 
 func (s *Section) MakeGraph() (*Graph, error) {
   if s.Name != "graph" {
-    return nil, &Error{ "Graphs can only be made out of 'graph' sections." }
+    return nil, &yedError{ "Graphs can only be made out of 'graph' sections." }
   }
   var g Graph
   g.hierarchic = s.GetAttribute("hierarchic").Int()
@@ -127,7 +127,7 @@ func (s *Section) MakeGraph() (*Graph, error) {
 }
 func (s *Section) MakeNode(graph *Graph) (*Node, error) {
   if s.Name != "node" {
-    return nil, &Error{ "Nodes can only be made out of 'node' sections." }
+    return nil, &yedError{ "Nodes can only be made out of 'node' sections." }
   }
   var n Node
   n.graph = graph
@@ -160,7 +160,7 @@ func hexToInt(h string) int {
 }
 func (s *Section) MakeEdge(graph *Graph) (*Edge, error) {
   if s.Name != "edge" {
-    return nil, &Error{ "Edges can only be made out of 'edge' sections." }
+    return nil, &yedError{ "Edges can only be made out of 'edge' sections." }
   }
   var e Edge
   e.graph = graph
