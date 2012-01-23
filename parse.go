@@ -8,16 +8,17 @@ import (
   "io"
   "io/ioutil"
   "bytes"
+  "strings"
 )
 
-type Attribute struct {
+type attribute struct {
   Key  string `xml:"key,attr"`
   Type string `xml:"type,attr"`
   Data string `xml:",chardata"`
 }
-func (a *Attribute) Int() int {
+func (a *attribute) Int() int {
   if a.Type != "int" {
-    panic(fmt.Sprintf("Tried to get an Attribute of type %s as an int.", a.Type))
+    panic(fmt.Sprintf("Tried to get an attribute of type %s as an int.", a.Type))
   }
   v,err := strconv.Atoi(a.Data)
   if err != nil {
@@ -25,9 +26,9 @@ func (a *Attribute) Int() int {
   }
   return v
 }
-func (a *Attribute) Float64() float64 {
+func (a *attribute) Float64() float64 {
   if a.Type != "double" {
-    panic(fmt.Sprintf("Tried to get an Attribute of type %s as a double.", a.Type))
+    panic(fmt.Sprintf("Tried to get an attribute of type %s as a double.", a.Type))
   }
   v,err := strconv.ParseFloat(a.Data, 64)
   if err != nil {
@@ -35,23 +36,23 @@ func (a *Attribute) Float64() float64 {
   }
   return v
 }
-func (a *Attribute) Str() string {
+func (a *attribute) Str() string {
   if a.Type != "String" {
-    panic(fmt.Sprintf("Tried to get an Attribute of type %s as a string.", a.Type))
+    panic(fmt.Sprintf("Tried to get an attribute of type %s as a string.", a.Type))
   }
   return a.Data
 }
 
 type Section struct {
   Name       string      `xml:"name,attr"`
-  Attributes []Attribute `xml:"attribute"`
+  Attributes []attribute `xml:"attribute"`
   Sections   []Section   `xml:"section"`
 
-  atts map[string]*Attribute
+  atts map[string]*attribute
 }
-func (s *Section) GetAttribute(name string) *Attribute {
+func (s *Section) GetAttribute(name string) *attribute {
   if s.atts == nil {
-    s.atts = make(map[string]*Attribute)
+    s.atts = make(map[string]*attribute)
     for i,att := range s.Attributes {
       s.atts[att.Key] = &s.Attributes[i]
     }
@@ -91,51 +92,55 @@ func (s *Section) MakeGraph() (*Graph, error) {
     return nil, &Error{ "Graphs can only be made out of 'graph' sections." }
   }
   var g Graph
-  g.Hierarchic = s.GetAttribute("hierarchic").Int()
-  g.Label = s.GetAttribute("label").Str()
-  g.Directed = s.GetAttribute("directed").Int()
-  g.Nodes = make(map[int]*Node)
-  g.Groups = make(map[int][]*Node)
+  g.hierarchic = s.GetAttribute("hierarchic").Int()
+  g.label = s.GetAttribute("label").Str()
+  g.directed = s.GetAttribute("directed").Int()
+  g.nodes = make(map[int]*Node)
   for _,section := range s.Sections {
     if section.Name != "node" { continue }
-    node,err := section.MakeNode()
+    node,err := section.MakeNode(&g)
     if err != nil {
       return nil, err
     }
-    g.Nodes[node.Id] = node
-    if node.Group >= 0 {
-      groups := g.Groups[node.Group]
-      groups = append(groups, node)
-      g.Groups[node.Group] = groups
+    g.nodes[node.id] = node
+  }
+  for _,node := range g.nodes {
+    if node.group_id >= 0 {
+      kids := g.nodes[node.group_id].children
+      kids = append(kids, node)
+      g.nodes[node.group_id].children = kids
     }
   }
   for _,section := range s.Sections {
     if section.Name != "edge" { continue }
-    edge,err := section.MakeEdge()
+    edge,err := section.MakeEdge(&g)
     if err != nil {
       return nil, err
     }
-    g.Edges = append(g.Edges, edge)
-    src := g.Nodes[edge.Src]
-    src.Outputs = append(src.Outputs, edge)
-    dst := g.Nodes[edge.Dst]
-    dst.Inputs = append(dst.Inputs, edge)
+    g.edges = append(g.edges, edge)
+    src := g.nodes[edge.src]
+    src.outputs = append(src.outputs, edge)
+    dst := g.nodes[edge.dst]
+    dst.inputs = append(dst.inputs, edge)
   }
   return &g, nil
 }
-func (s *Section) MakeNode() (*Node, error) {
+func (s *Section) MakeNode(graph *Graph) (*Node, error) {
   if s.Name != "node" {
     return nil, &Error{ "Nodes can only be made out of 'node' sections." }
   }
   var n Node
-  n.Id = s.GetAttribute("id").Int()
-  n.Label = s.GetAttribute("label").Str()
+  n.graph = graph
+  n.id = s.GetAttribute("id").Int()
+  n.label = s.GetAttribute("label").Str()
+  n.is_group = (s.GetAttribute("isGroup") != nil)
   att := s.GetAttribute("gid")
   if att == nil {
-    n.Group = -1
+    n.group_id = -1
   } else {
-    n.Group = att.Int()
+    n.group_id = att.Int()
   }
+  n.process()
   return &n, nil
 }
 func hexToInt(h string) int {
@@ -153,16 +158,17 @@ func hexToInt(h string) int {
   }
   return n
 }
-func (s *Section) MakeEdge() (*Edge, error) {
+func (s *Section) MakeEdge(graph *Graph) (*Edge, error) {
   if s.Name != "edge" {
     return nil, &Error{ "Edges can only be made out of 'edge' sections." }
   }
   var e Edge
-  e.Src = s.GetAttribute("source").Int()
-  e.Dst = s.GetAttribute("target").Int()
+  e.graph = graph
+  e.src = s.GetAttribute("source").Int()
+  e.dst = s.GetAttribute("target").Int()
   label := s.GetAttribute("label")
   if label != nil {
-    e.Label = label.Str()
+    e.label = label.Str()
   }
   for _,sec := range s.Sections {
     switch sec.Name {
@@ -171,11 +177,12 @@ func (s *Section) MakeEdge() (*Edge, error) {
         if fill == nil { continue }
         s := fill.Str()
         if len(s) != 7 { continue }
-        e.R = hexToInt(s[1:3])
-        e.G = hexToInt(s[3:5])
-        e.B = hexToInt(s[5:7])
+        e.r = hexToInt(s[1:3])
+        e.g = hexToInt(s[3:5])
+        e.b = hexToInt(s[5:7])
     }
   }
+  e.process()
   return &e, nil
 }
 
@@ -185,27 +192,116 @@ type Document struct {
   Graph   Graph
 }
 type Graph struct {
-  Hierarchic int
-  Label      string
-  Directed   int
-  Nodes      map[int]*Node
-  Edges      []*Edge
-  Groups     map[int][]*Node
+  hierarchic int
+  label      string
+  directed   int
+  nodes      map[int]*Node
+  edges      []*Edge
+}
+func (g *Graph) NumEdges() int {
+  return len(g.edges)
+}
+func (g *Graph) Edge(n int) *Edge {
+  return g.edges[n]
+}
+func (g *Graph) NumNodes() int {
+  return len(g.nodes)
+}
+func (g *Graph) Node(n int) *Node {
+  return g.nodes[n]
+}
+type labeler struct {
+  // The text associated with this node in the yed file
+  label   string
+
+  // The label text split into lines
+  lines []string
+
+  // For any line in lines that is of the form "foo:bar" this map will contain a key 'foo'
+  // with the value 'bar'
+  tags map[string]string
+}
+func (l *labeler) process() {
+  l.lines = strings.Split(l.label, "\n")
+  l.tags = make(map[string]string)
+  for _,line := range l.lines {
+    if strings.Contains(line, ":") {
+      parts := strings.SplitN(line, ":", 2)
+      l.tags[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+    }
+  }
+}
+func (l *labeler) Label() string {
+  return l.label
+}
+func (l *labeler) NumLines() int {
+  return len(l.label)
+}
+func (l *labeler) Line(n int) string {
+  return l.lines[n]
+}
+func (l *labeler) Tag(key string) string {
+  return l.tags[key]
 }
 type Node struct {
-  Id      int
-  Label   string
-  Group   int
-  Inputs  []*Edge
-  Outputs []*Edge
+  graph *Graph
+
+  id      int
+
+  labeler
+
+  group_id int
+  is_group bool
+
+  inputs  []*Edge
+  outputs []*Edge
+  children []*Node
 }
-type Edge struct {
-  Src   int
-  Dst   int
-  Label string
-  R,G,B int
+func (n *Node) NumInputs() int {
+  return len(n.inputs)
+}
+func (n *Node) Input(id int) *Edge {
+  return n.inputs[id]
+}
+func (n *Node) NumOutputs() int {
+  return len(n.outputs)
+}
+func (n *Node) Output(id int) *Edge {
+  return n.outputs[id]
+}
+func (n *Node) NumChildren() int {
+  return len(n.children)
+}
+func (n *Node) Child(id int) *Node {
+  return n.children[id]
+}
+// Returns the Node representing the group that this Node belongs to, or nil
+// if this Node doesn't belong to a group.
+func (n *Node) Group() *Node {
+  return n.graph.nodes[n.group_id]
 }
 
+type Edge struct {
+  graph *Graph
+
+  src   int
+  dst   int
+  labeler
+  r,g,b int
+}
+func (e *Edge) Src() *Node {
+  return e.graph.nodes[e.src]
+}
+func (e *Edge) Dst() *Node {
+  return e.graph.nodes[e.dst]
+}
+func (e *Edge) RGBA() (r,g,b,a uint32) {
+  r = uint32(e.r)
+  g = uint32(e.g)
+  b = uint32(e.b)
+  a = 255
+  return
+}
 func Parse(r io.Reader) (*Document, error) {
   var s Section
   data,err := ioutil.ReadAll(r)
@@ -243,23 +339,4 @@ func ParseFromFile(filename string) (*Document, error) {
     return nil, err
   }
   return doc, nil
-}
-
-func main() {
-  doc, err := ParseFromFile("state.xgml")
-  if err != nil {
-    fmt.Printf("Error: %s\n", err.Error())
-    return
-  }
-  var n *Node
-  n = doc.Graph.Nodes[0]
-  for i := 0; i < 50; i++ {
-    fmt.Printf("%d: %s\n", i, n.Label)
-    next := n.Outputs[(i*i - i) % len(n.Outputs)].Dst
-    fmt.Printf("Following %d\n", next)
-    n = doc.Graph.Nodes[next]
-  }
-  for i := range doc.Graph.Edges {
-    fmt.Printf("Colors: %d %d %d\n", doc.Graph.Edges[i].R, doc.Graph.Edges[i].G, doc.Graph.Edges[i].B)
-  }
 }
