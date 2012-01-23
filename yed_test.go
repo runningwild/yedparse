@@ -51,6 +51,7 @@ func YedSpec(c gospec.Context) {
         }
       }
     }
+    c.Expect(found, Equals, true)
 
     // Check that groups are set up properly
     for i := 0; i < g.Graph.NumNodes(); i++ {
@@ -63,9 +64,19 @@ func YedSpec(c gospec.Context) {
         switch group.Child(i).Label() {
           case "option 3":
           opt3++
+          opt := group.Child(i)
+          c.Expect(opt.NumGroupInputs(), Equals, 3)
+          c.Expect(opt.GroupInput(1).Dst().Line(0), Equals, "nubcake")
+          c.Expect(opt.GroupInput(2).Dst().Line(0), Equals, "bigger")
+          c.Expect(opt.NumGroupOutputs(), Equals, 2)
 
           case "option 4":
           opt4++
+          opt := group.Child(i)
+          c.Expect(opt.NumGroupInputs(), Equals, 3)
+          c.Expect(opt.GroupInput(1).Dst().Line(0), Equals, "nubcake")
+          c.Expect(opt.GroupInput(2).Dst().Line(0), Equals, "bigger")
+          c.Expect(opt.NumGroupOutputs(), Equals, 2)
 
           default:
           panic("Expected 'option3' or 'option4', found '" + group.Child(i).Label() + "'")
@@ -74,8 +85,8 @@ func YedSpec(c gospec.Context) {
       c.Expect(opt3, Equals, 1)
       c.Expect(opt4, Equals, 1)
 
-      c.Expect(group.NumInputs(), Equals, 0)
-      c.Assume(group.NumOutputs(), Equals, 1)
+      c.Expect(group.NumInputs(), Equals, 1)
+      c.Assume(group.NumOutputs(), Equals, 2)
       c.Expect(group.Output(0).Dst().Label(), Equals, "choice")
 
       parent := group.Group()
@@ -85,7 +96,14 @@ func YedSpec(c gospec.Context) {
       c.Expect(parent.NumChildren(), Equals, 3)
     }
 
+    var opt4 *yed.Node
+    for i := 0; i < g.Graph.NumNodes(); i++ {
+      if g.Graph.Node(i).Label() == "option 4" {
+        opt4 = g.Graph.Node(i)
+        break
+      }
+    }
+    c.Assume(opt4, Not(Equals), nil)
 
-    c.Expect(found, Equals, true)
   })
 }

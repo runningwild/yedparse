@@ -322,5 +322,65 @@ tag3: walrus</attribute>
 				</section>
 			</section>
 		</section>
+		<section name="edge">
+			<attribute key="source" type="int">6</attribute>
+			<attribute key="target" type="int">5</attribute>
+			<section name="graphics">
+				<attribute key="fill" type="String">#000000</attribute>
+				<attribute key="targetArrow" type="String">standard</attribute>
+				<section name="Line">
+					<section name="point">
+						<attribute key="x" type="double">390.0</attribute>
+						<attribute key="y" type="double">-199.8330078125</attribute>
+					</section>
+					<section name="point">
+						<attribute key="x" type="double">390.0</attribute>
+						<attribute key="y" type="double">-30.0</attribute>
+					</section>
+					<section name="point">
+						<attribute key="x" type="double">270.0</attribute>
+						<attribute key="y" type="double">-30.0</attribute>
+					</section>
+					<section name="point">
+						<attribute key="x" type="double">292.5</attribute>
+						<attribute key="y" type="double">-251.666015625</attribute>
+					</section>
+				</section>
+			</section>
+			<section name="edgeAnchor">
+				<attribute key="xTarget" type="double">-0.11749347299337387</attribute>
+				<attribute key="yTarget" type="double">0.9099434018135071</attribute>
+			</section>
+		</section>
+		<section name="edge">
+			<attribute key="source" type="int">2</attribute>
+			<attribute key="target" type="int">6</attribute>
+			<section name="graphics">
+				<attribute key="fill" type="String">#000000</attribute>
+				<attribute key="targetArrow" type="String">standard</attribute>
+				<section name="Line">
+					<section name="point">
+						<attribute key="x" type="double">180.0</attribute>
+						<attribute key="y" type="double">-104.0</attribute>
+					</section>
+					<section name="point">
+						<attribute key="x" type="double">180.0</attribute>
+						<attribute key="y" type="double">-11.333333015441895</attribute>
+					</section>
+					<section name="point">
+						<attribute key="x" type="double">420.0</attribute>
+						<attribute key="y" type="double">-11.333333015441895</attribute>
+					</section>
+					<section name="point">
+						<attribute key="x" type="double">390.0</attribute>
+						<attribute key="y" type="double">-199.8330078125</attribute>
+					</section>
+				</section>
+			</section>
+			<section name="edgeAnchor">
+				<attribute key="xTarget" type="double">0.37974682450294495</attribute>
+				<attribute key="yTarget" type="double">0.9791121482849121</attribute>
+			</section>
+		</section>
 	</section>
 </section>

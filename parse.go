@@ -1,6 +1,7 @@
 package yed
 
 import (
+  "sort"
   "fmt"
   "encoding/xml"
   "os"
@@ -243,6 +244,14 @@ func (l *labeler) Line(n int) string {
 func (l *labeler) Tag(key string) string {
   return l.tags[key]
 }
+func (l *labeler) TagKeys() []string {
+  var keys []string
+  for key := range l.tags {
+    keys = append(keys, key)
+  }
+  sort.Strings(keys)
+  return keys
+}
 type Node struct {
   graph *Graph
 
@@ -268,6 +277,26 @@ func (n *Node) NumOutputs() int {
 }
 func (n *Node) Output(id int) *Edge {
   return n.outputs[id]
+}
+func (n *Node) NumGroupInputs() int {
+  if n == nil { return 0 }
+  return len(n.inputs) + n.Group().NumGroupInputs()
+}
+func (n *Node) GroupInput(id int) *Edge {
+  if id < len(n.inputs) {
+    return n.inputs[id]
+  }
+  return n.Group().GroupInput(id - len(n.inputs))
+}
+func (n *Node) NumGroupOutputs() int {
+  if n == nil { return 0 }
+  return len(n.outputs) + n.Group().NumGroupOutputs()
+}
+func (n *Node) GroupOutput(id int) *Edge {
+  if id < len(n.inputs) {
+    return n.outputs[id]
+  }
+  return n.Group().GroupOutput(id - len(n.outputs))
 }
 func (n *Node) NumChildren() int {
   return len(n.children)
