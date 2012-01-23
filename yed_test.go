@@ -10,6 +10,13 @@ func YedSpec(c gospec.Context) {
   c.Specify("Load a simple .xgml file.", func() {
     g, err := yed.ParseFromFile("state.xgml")
     c.Assume(err, Equals, nil)
+
+    c.Specify("Nodes have the proper Ids", func() {
+      for i := 0; i < g.Graph.NumNodes(); i++ {
+        c.Expect(g.Graph.Node(i).Id(), Equals, i)
+      }
+    })
+
     red_count := 0
     green_count := 0
     for i := 0; i < g.Graph.NumEdges(); i++ {

@@ -96,20 +96,20 @@ func (s *Section) MakeGraph() (*Graph, error) {
   g.hierarchic = s.GetAttribute("hierarchic").Int()
   g.label = s.GetAttribute("label").Str()
   g.directed = s.GetAttribute("directed").Int()
-  g.nodes = make(map[int]*Node)
+  nodes := make(map[int]*Node)
   for _,section := range s.Sections {
     if section.Name != "node" { continue }
     node,err := section.MakeNode(&g)
     if err != nil {
       return nil, err
     }
-    g.nodes[node.id] = node
+    nodes[node.id] = node
   }
-  for _,node := range g.nodes {
+  for _,node := range nodes {
     if node.group_id >= 0 {
-      kids := g.nodes[node.group_id].children
+      kids := nodes[node.group_id].children
       kids = append(kids, node)
-      g.nodes[node.group_id].children = kids
+      nodes[node.group_id].children = kids
     }
   }
   for _,section := range s.Sections {
@@ -119,11 +119,34 @@ func (s *Section) MakeGraph() (*Graph, error) {
       return nil, err
     }
     g.edges = append(g.edges, edge)
-    src := g.nodes[edge.src]
+    src := nodes[edge.src]
     src.outputs = append(src.outputs, edge)
-    dst := g.nodes[edge.dst]
+    dst := nodes[edge.dst]
     dst.inputs = append(dst.inputs, edge)
   }
+
+  id_map := make(map[int]int)
+  count := 0
+  for _,node := range nodes {
+    id_map[node.id] = count
+    count++
+  }
+  for _,node := range nodes {
+    node.id = id_map[node.id]
+    if nid,ok := id_map[node.group_id]; ok {
+      node.group_id = nid
+    }
+  }
+  g.nodes = make([]*Node, len(nodes))
+  for _,node := range nodes {
+    g.nodes[node.id] = node
+  }
+
+  for i := range g.edges {
+    g.edges[i].src = id_map[g.edges[i].src]
+    g.edges[i].dst = id_map[g.edges[i].dst]
+  }
+
   return &g, nil
 }
 func (s *Section) MakeNode(graph *Graph) (*Node, error) {
@@ -196,7 +219,7 @@ type Graph struct {
   hierarchic int
   label      string
   directed   int
-  nodes      map[int]*Node
+  nodes      []*Node
   edges      []*Edge
 }
 func (g *Graph) NumEdges() int {
@@ -266,6 +289,9 @@ type Node struct {
   outputs []*Edge
   children []*Node
 }
+func (n *Node) Id() int {
+  return n.id
+}
 func (n *Node) NumInputs() int {
   return len(n.inputs)
 }
@@ -307,6 +333,7 @@ func (n *Node) Child(id int) *Node {
 // Returns the Node representing the group that this Node belongs to, or nil
 // if this Node doesn't belong to a group.
 func (n *Node) Group() *Node {
+  if n.group_id < 0 { return nil }
   return n.graph.nodes[n.group_id]
 }
 
