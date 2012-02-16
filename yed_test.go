@@ -1,9 +1,9 @@
 package yed_test
 
 import (
-  . "gospec"
-  "gospec"
-  "yed"
+  . "github.com/orfjackal/gospec/src/gospec"
+  "github.com/orfjackal/gospec/src/gospec"
+  "github.com/runningwild/yedparse"
 )
 
 func YedSpec(c gospec.Context) {

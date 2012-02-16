@@ -8,7 +8,6 @@ import (
   "strconv"
   "io"
   "io/ioutil"
-  "bytes"
   "strings"
 )
 
@@ -370,9 +369,8 @@ func Parse(r io.Reader) (*Document, error) {
       break
     }
   }
-  r = bytes.NewBuffer(data)
 
-  err = xml.Unmarshal(r, &s)
+  err = xml.Unmarshal(data, &s)
   if err != nil {
     return nil, err
   }
