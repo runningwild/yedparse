@@ -104,7 +104,17 @@ func (s *Section) MakeGraph() (*Graph, error) {
     }
     nodes[node.id] = node
   }
-  for _,node := range nodes {
+  // We want to be able to iterate over the nodes without worrying about
+  // whether yed used exactly the numbers 0..n-1 in order, so we have to pull
+  // out all of the indices as sort them.
+  nodes_index := make([]int, len(nodes))[0:0]
+  for index := range nodes {
+    nodes_index = append(nodes_index, index)
+  }
+  sort.Ints(nodes_index)
+
+  for _,index := range nodes_index {
+    node := nodes[index]
     if node.group_id >= 0 {
       kids := nodes[node.group_id].children
       kids = append(kids, node)
@@ -126,18 +136,21 @@ func (s *Section) MakeGraph() (*Graph, error) {
 
   id_map := make(map[int]int)
   count := 0
-  for _,node := range nodes {
+  for _,index := range nodes_index {
+    node := nodes[index]
     id_map[node.id] = count
     count++
   }
-  for _,node := range nodes {
+  for _,index := range nodes_index {
+    node := nodes[index]
     node.id = id_map[node.id]
     if nid,ok := id_map[node.group_id]; ok {
       node.group_id = nid
     }
   }
   g.nodes = make([]*Node, len(nodes))
-  for _,node := range nodes {
+  for _,index := range nodes_index {
+    node := nodes[index]
     g.nodes[node.id] = node
   }
 
